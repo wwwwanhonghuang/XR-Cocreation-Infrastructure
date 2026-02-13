@@ -3,11 +3,11 @@ include ../../common.mk
 # --- Boost Variables ---
 BOOST_VERSION      := 1.90.0
 BOOST_SRC_DIR      := $(THIRDPARTY_DIR)/boost-$(BOOST_VERSION)
-BOOST_ARCHIVE          := $(THIRDPARTY_DIR)/boost-$(BOOST_VERSION).tar.gz.7z
+BOOST_ARCHIVE          := $(THIRDPARTY_DIR)/boost-$(BOOST_VERSION).7z
 
-OPENCV_URL         := https://github.com/opencv/opencv/archive/refs/tags/$(OPENCV_VERSION).zip
+OPENCV_URL         := https://github.com/opencv/opencv/archive/refs/tags/$(OPENCV_VERSION).7z
 OPENCV_INSTALL_DIR := $(call package_installed_path,opencv,$(OPENCV_VERSION))
-BOOST_URL          := https://github.com/boostorg/boost/releases/download/boost-$(BOOST_VERSION)/boost-$(BOOST_VERSION)-cmake.7z
+BOOST_URL          := https://github.com/boostorg/boost/releases/download/boost-$(BOOST_VERSION)/boost-$(BOOST_VERSION).7z
 
 BOOST_INSTALL_DIR  := $(call package_installed_path,boost,$(BOOST_VERSION))
 
@@ -54,10 +54,8 @@ $(BOOST_MARKER):
 	@echo "Extracting Boost..."
 	@# Use -xf (tar handles gzip automatically in modern versions)
 	7z x $(BOOST_ARCHIVE) -o$(THIRDPARTY_DIR)
-	
-	@# Rename the extracted 'boost_1_90_0' to your 'boost-1.90.0'
-	@if [ -d "$(THIRDPARTY_DIR)/boost_$(BOOST_UNDERSCORE)" ]; then \
-		mv $(THIRDPARTY_DIR)/boost_$(BOOST_UNDERSCORE) $(BOOST_SRC_DIR); \
+	@if [ ! -d $(BOOST_SRC_DIR) ]; then \
+		mv $(THIRDPARTY_DIR)/boost-boost-$(BOOST_VERSION) $(BOOST_SRC_DIR); \
 	fi
 	
 	@rm -f $(BOOST_ARCHIVE)

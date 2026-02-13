@@ -36,5 +36,3 @@ make -j
 ```
 
 ## Build OpenFace (see [openface](./openface/README.md))
-
-## Build Openpose (see [openpose](./openpose/README.md))
