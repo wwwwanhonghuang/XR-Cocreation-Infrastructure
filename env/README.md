@@ -3,6 +3,7 @@
 ``` bash
 conda create -n xr-integrated python=3.12
 conda activate xr-integrated
+conda install -n xr-integrated -c conda-forge openssl>=3.2.0
 ```
 
 For more smooth environment setup, it is expect in order prepare the following environment according instructions.

@@ -13,6 +13,10 @@ PYTHON_ROOT          := $(abspath $(shell $(ACTIVATED_PYTHON_BIN) -c "import sys
 # --- Python Paths ---
 PYTHON3_INCLUDE_DIR := $(shell $(ACTIVATED_PYTHON_BIN) -c "from sysconfig import get_paths as gp; print(gp()['include'])")
 PYTHON3_LIBRARY     := $(shell find $(PYTHON_ROOT)/lib -name 'libpython$(REQUIRED_PY_VER)*.so*' | head -n 1)
+PYTHON_SITE_PACKAGES := $(shell $(ACTIVATED_PYTHON_BIN) -c "import site; print(site.getsitepackages()[0])")
+PYTHON3_LIB_DIR := $(PYTHON_ROOT)/lib
+PYTHON_EXT_SUFFIX := $(shell $(ACTIVATED_PYTHON_BIN) -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
+
 
 # --- Shared Tool Flags ---
 # Add common flags like nproc for parallel builds

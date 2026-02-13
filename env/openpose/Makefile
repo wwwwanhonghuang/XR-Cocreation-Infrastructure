@@ -42,6 +42,8 @@ FACE_MODEL     := face/pose_iter_116000.caffemodel
 HAND_MODEL     := hand/pose_iter_102000.caffemodel
 MODELS_DIR 	   := $(OPENPOSE_SRC_DIR)/models
 
+
+
 .PHONY: build_caffe build_openpose prepare_opencv_src download_models install-prerequisites
 
 install-prerequisites: install-caffe-deps
@@ -202,6 +204,27 @@ build_openpose: $(OPENPOSE_PYBIND_MARKER) $(CAFFE_BUILD_MARKER) download_models
 	make -j$(THREADS) && \
 	make install
 	cp -r $(OPENPOSE_SRC_DIR)/models $(OPENPOSE_INSTALL_DIR)
+	
+	@echo "--- Post-Build Integration ---"
+	@echo "Fixing Python 3.12 naming and package structure..."
+	@mkdir -p $(OPENPOSE_INSTALL_DIR)/python/openpose
+	@# Rename and move the binary to the correct package location
+	@if [ -f $(OPENPOSE_INSTALL_DIR)/python/pyopenposeNone ]; then \
+		mv $(OPENPOSE_INSTALL_DIR)/python/pyopenposeNone \
+		   $(OPENPOSE_INSTALL_DIR)/python/openpose/pyopenpose$(PYTHON_EXT_SUFFIX); \
+	fi
+	
+	@echo "Linking OpenPose and Caffe libraries to Conda lib directory..."
+	@# Symlink the C++ core libraries so the dynamic linker finds them automatically
+	@ln -sf $(OPENPOSE_INSTALL_DIR)/lib/libopenpose.so* $(PYTHON3_LIB_DIR)/
+	@ln -sf $(CAFFE_INSTALL_DIR)/lib/libcaffe.so* $(PYTHON3_LIB_DIR)/
+	
+	@echo "Linking OpenPose package to site-packages..."
+	@# Symlink the python package folder
+	@ln -sfv $(OPENPOSE_INSTALL_DIR)/python/openpose $(PYTHON_SITE_PACKAGES)/openpose
+
+	@echo "Verifying installation..."
+	@$(ACTIVATED_PYTHON_BIN) -c "import openpose; print('Build Success: OpenPose is ready for XR infrastructure!')"
 
 clean_openpose_buld_files:
 	rm -rf $(OPENPOSE_SRC_DIR)/build
