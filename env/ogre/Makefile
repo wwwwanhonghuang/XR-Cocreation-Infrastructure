@@ -31,7 +31,6 @@ prepare_ogre3d_src:
 # Note: Added -y to apt-get for non-interactive Makefile execution
 .PHONY: install-unix-dependencies
 install-unix-dependencies:
-	sudo apt-get update
 	sudo apt-get install -y libgles2-mesa-dev libvulkan-dev glslang-dev \
 		libwayland-dev libwayland-egl1 libegl-dev \
 		libxrandr-dev libsdl2-dev doxygen
@@ -45,7 +44,7 @@ make_ogre3d: $(OGRE3D_MARKER) install-unix-dependencies
 		-D CMAKE_BUILD_TYPE=Release \
 		-D CMAKE_INSTALL_PREFIX=$(OGRE_INSTALL_DIR) \
 		-D OGRE3D_BUILD_COMPONENT_PYTHON=ON \
-		-D OGRE3D_USE_WAYLAND=ON \
+		-D OGRE3D_USE_WAYLAND=OFF \
 		-D OGRE3D_BUILD_SAMPLES=OFF \
 		-D PYTHON_EXECUTABLE=$(ACTIVATED_PYTHON_BIN) \
 		..
