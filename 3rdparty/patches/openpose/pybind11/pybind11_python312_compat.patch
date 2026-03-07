@@ -1,0 +1,118 @@
+diff --git a/include/pybind11/cast.h b/include/pybind11/cast.h
+index 80abb2b9..7ebcd284 100644
+--- a/include/pybind11/cast.h
++++ b/include/pybind11/cast.h
+@@ -31,6 +31,18 @@
+ #ifdef PYBIND11_HAS_STRING_VIEW
+ #include <string_view>
+ #endif
++#if PY_VERSION_HEX >= 0x030b0000
++    // Force visibility of the internal getters if the header missed them
++    #ifndef PyCode_GetFileName
++        #define PyCode_GetFileName(code) ((PyCodeObject *)(code))->co_filename
++    #endif
++    #ifndef PyCode_GetName
++        #define PyCode_GetName(code) ((PyCodeObject *)(code))->co_name
++    #endif
++    #ifndef PyCode_GetArgCount
++        #define PyCode_GetArgCount(code) ((PyCodeObject *)(code))->co_argcount
++    #endif
++#endif
+ 
+ NAMESPACE_BEGIN(PYBIND11_NAMESPACE)
+ NAMESPACE_BEGIN(detail)
+@@ -438,11 +450,21 @@ PYBIND11_NOINLINE inline std::string error_string() {
+         errorString += "\n\nAt:\n";
+         while (frame) {
+             int lineno = PyFrame_GetLineNumber(frame);
++            // --- 修改开始 ---
++            // 3.11+ 必须使用 PyFrame_GetCode(frame) 获取 code 对象
++            // 注意：PyFrame_GetCode 会增加引用计数，使用完需 Py_XDECREF
++            PyCodeObject* f_code = PyFrame_GetCode(frame); 
+             errorString +=
+-                "  " + handle(frame->f_code->co_filename).cast<std::string>() +
++                "  " + pybind11::handle(PyCode_GetFileName((PyObject*)f_code)).cast<std::string>() +
+                 "(" + std::to_string(lineno) + "): " +
+-                handle(frame->f_code->co_name).cast<std::string>() + "\n";
+-            frame = frame->f_back;
++                handle(PyCode_GetName(f_code)).cast<std::string>() + "\n";
++            Py_XDECREF(f_code); // 释放引用计数，防止内存泄漏
++
++            // 3.11+ 必须使用 PyFrame_GetBack(frame) 获取上一级 frame
++            // 同样会增加引用计数
++            PyFrameObject* next_frame = PyFrame_GetBack(frame);
++            frame = next_frame;
++            // --- 修改结束 ---
+         }
+     }
+ #endif
+diff --git a/include/pybind11/pybind11.h b/include/pybind11/pybind11.h
+index 7fa0f0e1..0d65d93c 100644
+--- a/include/pybind11/pybind11.h
++++ b/include/pybind11/pybind11.h
+@@ -45,7 +45,18 @@
+ #include "options.h"
+ #include "detail/class.h"
+ #include "detail/init.h"
+-
++#if PY_VERSION_HEX >= 0x030b0000
++    // Force visibility of the internal getters if the header missed them
++    #ifndef PyCode_GetFileName
++        #define PyCode_GetFileName(code) ((PyCodeObject *)(code))->co_filename
++    #endif
++    #ifndef PyCode_GetName
++        #define PyCode_GetName(code) ((PyCodeObject *)(code))->co_name
++    #endif
++    #ifndef PyCode_GetArgCount
++        #define PyCode_GetArgCount(code) ((PyCodeObject *)(code))->co_argcount
++    #endif
++#endif
+ NAMESPACE_BEGIN(PYBIND11_NAMESPACE)
+ 
+ /// Wraps an arbitrary C++ function/method/lambda function/.. into a callable Python object
+@@ -2018,14 +2029,37 @@ inline function get_type_overload(const void *this_ptr, const detail::type_info
+     /* Don't call dispatch code if invoked from overridden function.
+        Unfortunately this doesn't work on PyPy. */
+ #if !defined(PYPY_VERSION)
+-    PyFrameObject *frame = PyThreadState_Get()->frame;
+-    if (frame && (std::string) str(frame->f_code->co_name) == name &&
+-        frame->f_code->co_argcount > 0) {
+-        PyFrame_FastToLocals(frame);
+-        PyObject *self_caller = PyDict_GetItem(
+-            frame->f_locals, PyTuple_GET_ITEM(frame->f_code->co_varnames, 0));
+-        if (self_caller == self.ptr())
+-            return function();
++// 3.11+ 使用 PyThreadState_GetFrame 获取当前 frame，它会增加引用计数
++    PyFrameObject *frame = PyThreadState_GetFrame(PyThreadState_Get());
++    
++    if (frame) {
++        // 获取 Code 对象（增加引用计数）
++        PyCodeObject *f_code = PyFrame_GetCode(frame);
++        
++        // 获取函数名和参数数量
++        bool name_match = (std::string) str(PyCode_GetName(f_code)) == name;
++        int arg_count = PyCode_GetArgCount(f_code);
++
++        if (name_match && arg_count > 0) {
++            PyFrame_FastToLocals(frame);
++            PyObject *f_locals = PyFrame_GetLocals(frame); // 3.11+ 推荐用法
++            
++            // 获取变量名元组并拿到第一个参数 (self)
++            PyObject *co_varnames = PyCode_GetVarnames(f_code);
++            PyObject *self_caller = PyDict_GetItem(
++                f_locals, PyTuple_GET_ITEM(co_varnames, 0));
++            
++            Py_XDECREF(co_varnames);
++            Py_XDECREF(f_locals);
++
++            if (self_caller == self.ptr()) {
++                Py_XDECREF(f_code);
++                Py_XDECREF(frame);
++                return function();
++            }
++        }
++        Py_XDECREF(f_code);
++        Py_XDECREF(frame); // 别忘了释放 PyThreadState_GetFrame 产生的引用
+     }
+ #else
+     /* PyPy currently doesn't provide a detailed cpyext emulation of
