@@ -1,8 +1,8 @@
 [submodule "frameworks"]
     path = frameworks
-	url =  git@github.com:wwwwanhonghuang/XR-Cocreation-Infrastructure-Frameworks.git
+    url =  git@github.com:wwwwanhonghuang/XR-Cocreation-Infrastructure-Frameworks.git
 
 [submodule "dance_dynamics"]
-    path = dance_dynamics
+    path = dance-dynamics
     url =  git@github.com:wwwwanhonghuang/dance-dynamics.git
 
