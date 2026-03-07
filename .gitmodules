@@ -1,0 +1,3 @@
+[submodule "frameworks"]
+    path = frameworks
+    url =  git@github.com:wwwwanhonghuang/XR-Cocreation-Infrastructure-Frameworks.git
